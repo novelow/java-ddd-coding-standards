@@ -1,6 +1,6 @@
 ---
 name: java-ddd-coding-standards
-description: "Java / Spring Boot DDD 分层与接口编码规范。当用户编写、新增、修改 Java 后端代码，设计 HTTP 接口，定义请求/响应对象，划分 Controller / Application / Domain / Infrastructure 分层，处理异常与日志，或编写持久层代码时使用。强制 Param / Request / Response / VO 四层对象隔离，禁止 POST 请求用 URL 传递复杂参数。也用于 Code Review 与重构。"
+description: "Java / Spring Boot DDD 分层与接口编码规范。只要任务涉及 Java 后端代码都必须加载：新增或修改 Controller / Service / Domain / Repository、Entity、Mapper；设计或改动 HTTP 接口（@PostMapping、@GetMapping、@RequestBody、@RequestParam、@PathVariable）；定义 Param / Request / Response / VO / DTO 请求响应对象；分层架构与包结构划分；异常处理、ErrorCode、BizException、日志；MyBatis / MyBatis-Plus 持久层、@Transactional、乐观锁；状态机、幂等、Code Review、重构、排查线上问题。强制 Param / Request / Response / VO 四层对象隔离，禁止 POST 请求用 URL query 传递复杂参数，禁止 @Autowired 字段注入。"
 description_zh: "Java Spring Boot DDD 架构与接口编码规范"
 description_en: "Java Spring Boot DDD architecture & API coding standards"
 version: 1.0.0
@@ -31,7 +31,7 @@ visibility: "public"
 | R6 | **NEVER** 在循环内查数据库、调用远程接口、发消息 | 必须批量化或先聚合再批量处理 |
 | R7 | **NEVER** 用 `if (state == X) { setState(Y); }` 直接改状态 | 状态流转必须走状态机 |
 | R8 | **NEVER** 把数据库 Entity 直接返回给前端 | 必须转换为 VO |
-| R9 | **NEVER** 使用字段注入 `@Autowired` | 必须构造器注入，优先 `@RequiredArgsConstructor` |
+| R9 | **NEVER** 在**生产代码**中使用字段注入 `@Autowired` | 必须构造器注入，优先 `@RequiredArgsConstructor`（测试类除外） |
 | R10 | **NEVER** 返回 `null` 集合或数组 | 返回空集合。单对象查询允许返回 null，但调用方必须判空 |
 | R11 | **NEVER** 让 Domain 层依赖 Spring 注解或基础设施实现 | Domain 层只依赖抽象与领域模型 |
 | R12 | **MUST** 所有写操作接口携带幂等标识字段 | 由调用方生成并传递 |

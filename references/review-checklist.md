@@ -15,7 +15,7 @@
 - R6 无循环内查库、调远程、发消息：✅ / ❌ / N/A
 - R7 状态流转走状态机，无 if-else 直接赋值：✅ / ❌ / N/A
 - R8 Entity 未直接返回前端：✅ / ❌ / N/A
-- R9 构造器注入，无 @Autowired 字段注入：✅ / ❌ / N/A
+- R9 生产代码构造器注入，无 @Autowired 字段注入：✅ / ❌ / N/A
 - R10 集合返回空集合而非 null：✅ / ❌ / N/A
 - R11 Domain 层无 Spring 注解与基础设施依赖：✅ / ❌ / N/A
 - R12 写接口携带幂等号 identifier：✅ / ❌ / N/A
@@ -75,8 +75,35 @@
 
 ### R9 依赖注入
 
-- 搜索 `@Autowired` 在字段上（非构造器）
+检查范围：**仅生产代码**（`src/main/java`），测试类不检查。
+
+- 搜索 `@Autowired` 是否出现在**字段**上（出现在构造器或 setter 上是允许的）
 - 确认服务类使用 `@RequiredArgsConstructor` + `private final` 字段
+- 确认没有被 `@Lazy` 用来"绕过"循环依赖——循环依赖应当重构拆分，不应被掩盖
+
+常见漏网形态：
+
+```java
+// ❌ 字段注入
+@Service
+public class OrderService {
+    @Autowired
+    private OrderRepository orderRepository;
+}
+
+// ❌ @Lazy 掩盖循环依赖
+@Service
+public class OrderService {
+    public OrderService(@Lazy InventoryService inventoryService) { ... }
+}
+
+// ✅ 构造器注入
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+    private final OrderRepository orderRepository;
+}
+```
 
 ### R13 事务
 
@@ -93,3 +120,6 @@
 | 单对象查询返回 null | ✅ 允许，但调用方必须判空 |
 | Domain 实体上有 `@TableName` | ✅ 允许，这属于持久化映射不是 Spring 容器注解 |
 | Application 层有 `if` 做流程分支 | ✅ 允许，R2 只约束 Controller |
+| **测试类**（`*Test` / `*IT`）用 `@Autowired` 字段注入 | ✅ 允许，标记 N/A。红线 R9 只约束生产代码 |
+| `@Bean` 方法的参数注入 | ✅ 允许，这是方法注入不是字段注入 |
+| `@ConfigurationProperties` 配置类有 setter | ✅ 允许，配置绑定需要 setter，该类可豁免 R9 |

@@ -24,6 +24,9 @@
 java-ddd-coding-standards/
 ├── README.md                            # 本文件
 ├── SKILL.md                             # 主文件：14 条红线 + 分层表 + 对象职责表 + 分册索引
+├── integration/                         # 落地挂载方案（怎么让 AI 真的遵守）
+│   ├── README.md                        # 三种挂载方式 + 可靠性排序 + 验证方法
+│   └── AGENT.md                         # 可直接放到项目根目录的强制触发模板
 ├── references/
 │   ├── api-design.md                    # 接口设计：参数传输方式、四层对象隔离、Controller 约束、统一响应、幂等
 │   ├── ddd-layering.md                  # DDD 分层：包结构、各层职责、充血模型、状态机、依赖方向
@@ -47,21 +50,36 @@ java-ddd-coding-standards/
 
 ## 安装
 
-### 作为 Skill 使用（推荐）
+> ⚠️ **只 clone 到 skills 目录是不够的。** Skill 靠语义匹配加载，存在漏加载，
+> 必须同时在项目根目录放 `AGENT.md` 强制引用它，否则 AI 大概率还是按自己习惯写。
 
-放到用户级 skills 目录，对所有项目生效：
-
-```bash
-git clone <your-repo-url> ~/.workbuddy/skills/java-ddd-coding-standards
-```
-
-或放到项目级目录，只对当前项目生效：
+### 三步走（推荐）
 
 ```bash
-git clone <your-repo-url> .workbuddy/skills/java-ddd-coding-standards
+cd /你的项目根目录
+
+# 1. 规范来源（版本可控，团队可对齐）
+git submodule add <your-repo-url> .workbuddy/skills/java-ddd-coding-standards
+
+# 2. 强制触发：复制 AGENT.md 模板到项目根并替换占位符
+cp .workbuddy/skills/java-ddd-coding-standards/integration/AGENT.md ./AGENT.md
+sed -i '' 's#{SKILL_PATH}#.workbuddy/skills/java-ddd-coding-standards#g' ./AGENT.md
+
+# 3. 骨架代码进源码树（全局替换包名）
+cp -r .workbuddy/skills/java-ddd-coding-standards/templates ./docs/_skeleton
+# 把 templates 下的类放到你的 common 包下，并替换 com.yourcompany → 你的包名
 ```
 
-其他 Agent 工具（如 Claude Code）放到对应目录即可，例如 `.claude/skills/`。
+完整说明、三种挂载方式的可靠性对比、以及「装完怎么验证真的生效」见
+**[`integration/README.md`](integration/README.md)**。
+
+### 其他安装位置
+
+| 场景 | 命令 | 说明 |
+|------|------|------|
+| 用户级（所有项目） | `git clone <url> ~/.workbuddy/skills/java-ddd-coding-standards` | 依赖语义匹配，**需配合 AGENT.md 使用** |
+| Claude Code | `git clone <url> .claude/skills/java-ddd-coding-standards` | 根目录约定文件改名为 `CLAUDE.md` |
+| 只当文档用 | 复制 `references/` 到项目 `docs/` | 人工查阅，无强制力 |
 
 ### 只作为规范文档使用
 
@@ -72,7 +90,10 @@ git clone <your-repo-url> .workbuddy/skills/java-ddd-coding-standards
 1. 复制 `templates/` 下的骨架代码到新项目，**全局替换 `com.yourcompany` 为你的包名**（命令见 `templates/README.md`）
 2. 按 `templates/README.md` 的「配套必做项」注册 MyBatis-Plus 的字段填充与乐观锁插件
 3. 每个业务模块建一个 `XxxErrorCode implements ErrorCode` 和一个 `XxxException extends BizException`
-4. 让 AI 写代码时加载本 skill，它会在每次产出后输出规范自检结果
+4. **把 `integration/AGENT.md` 放到项目根目录并替换 `{SKILL_PATH}`** —— 这一步决定了 AI 会不会真的遵守
+5. 验收：新开一个会话，让 AI 写「参数为订单号列表的批量取消接口」，
+   正确结果应该是 `@Valid @RequestBody BatchCancelParam` 而不是 `@RequestParam List<String>`，
+   且回复末尾带规范自检清单
 
 ## 14 条绝对红线（摘要）
 
@@ -86,7 +107,7 @@ git clone <your-repo-url> .workbuddy/skills/java-ddd-coding-standards
 | R6 | 禁止循环内查库 / 调远程 / 发消息 |
 | R7 | 状态流转必须走状态机 |
 | R8 | Entity 禁止直接返回前端 |
-| R9 | 禁止 `@Autowired` 字段注入，必须构造器注入 |
+| R9 | 生产代码禁止 `@Autowired` 字段注入，必须构造器注入（测试类除外） |
 | R10 | 禁止返回 null 集合 |
 | R11 | Domain 层禁止依赖 Spring 与基础设施 |
 | R12 | 写接口必须携带幂等号 |

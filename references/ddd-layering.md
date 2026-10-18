@@ -115,6 +115,53 @@ public class Order extends BaseEntity {
 允许：Mapper、Repository 实现、外部系统适配、缓存实现。
 禁止：包含业务规则判断。
 
+### 2.5 依赖注入（强制）
+
+**生产代码必须使用构造器注入，禁止字段注入（红线 R9）。**
+
+```java
+// ❌ 错误：字段注入
+@Service
+public class OrderService {
+    @Autowired
+    private OrderRepository orderRepository;
+}
+
+// ✅ 正确：构造器注入（Lombok 生成）
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+    private final OrderRepository orderRepository;
+}
+
+// ✅ 正确：字段多、需要显式控制时手写构造器
+@Service
+public class OrderService {
+    private final OrderRepository orderRepository;
+
+    public OrderService(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
+    }
+}
+```
+
+为什么禁止字段注入：
+
+| 问题 | 说明 |
+|------|------|
+| 依赖可变 | 字段无法声明 `final`，运行时可能被反射或测试框架改掉 |
+| 掩盖设计缺陷 | 循环依赖在字段注入下能"正常运行"，构造器注入会启动即失败，强迫你重构 |
+| 单元测试变慢 | 字段注入必须起 Spring 容器才能注入，构造器注入可直接 `new OrderService(mockRepo)` |
+| 半初始化风险 | 字段注入时 Bean 可能处于未完成初始化状态就被使用 |
+
+注意事项：
+
+- `@RequiredArgsConstructor` **只处理 `final` 字段**，混有非 final 字段时会静默漏掉——需要全部参与注入的字段都声明 `final`
+- 出现构造器注入导致的循环依赖报错时，**必须重构拆分**（通常是职责划分有问题），
+  禁止用 `@Lazy` 或改回字段注入绕过
+- 可选依赖可用 setter 注入或 `ObjectProvider`，不要退回字段注入
+- **测试类豁免**：`@SpringBootTest` 测试中用 `@Autowired` 注入被测对象是标准做法，不受 R9 约束
+
 ---
 
 ## 3. 状态机（强制）
